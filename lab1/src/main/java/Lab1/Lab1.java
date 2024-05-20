@@ -2,6 +2,7 @@ package Lab1;
 
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.engine.Format;
+import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.engine.Graphviz;
 import guru.nidi.graphviz.model.MutableGraph;
 
@@ -21,7 +22,7 @@ public class Lab1 {
             adjList.get(source).put(dest, adjList.get(source).getOrDefault(dest, 0) + 1);
         }
 
-        public void display() {
+        public void showDirectedGraph() {
             for (String node : adjList.keySet()) {
                 System.out.print(node + " -> ");
                 for (String neighbor : adjList.get(node).keySet()) {
@@ -57,6 +58,10 @@ public class Lab1 {
         }
 
         public void exportToPngFile(String filePath) {
+            exportToPngFile(filePath, Collections.emptyList());
+        }
+
+        public void exportToPngFile(String filePath, List<String> highlightNodes) {
             MutableGraph g = mutGraph("graph").setDirected(true);
             for (String node : adjList.keySet()) {
                 for (Map.Entry<String, Integer> entry : adjList.get(node).entrySet()) {
@@ -64,12 +69,19 @@ public class Lab1 {
                     g.add(mutNode(node).addLink(to(mutNode(neighbor)).with(Label.of(entry.getValue().toString()))));
                 }
             }
+
+            for (String node : highlightNodes) {
+                g.add(mutNode(node).add(Color.RED));
+            }
+
             try {
                 Graphviz.fromGraph(g).width(700).render(Format.PNG).toFile(new File(filePath));
             } catch (IOException e) {
                 System.out.println("Error writing PNG file: " + e.getMessage());
             }
         }
+
+
 
 
         public Map<String, Map<String, Integer>> getAdjList() {
@@ -124,9 +136,8 @@ public class Lab1 {
                     }
                     break;
 
-
                 case 2:
-                    graph.display();
+                    graph.showDirectedGraph();
                     break;
 
                 case 3:
@@ -150,13 +161,17 @@ public class Lab1 {
                     String startWord = scanner.nextLine();
                     System.out.print("请输入目标单词：");
                     String endWord = scanner.nextLine();
-                    String shortestPath = calcShortestPath(graph, startWord, endWord);
-                    System.out.println(shortestPath);
+                    List<String> shortestPath = calcShortestPath(graph, startWord, endWord);
+                    if (!shortestPath.isEmpty()) {
+                        System.out.println("Shortest path from \"" + startWord + "\" to \"" + endWord + "\": " + String.join(" -> ", shortestPath));
+                        System.out.print("请输入包含最短路径的PNG文件导出路径：");
+                        String shortestPathPngFilePath = scanner.nextLine();
+                        graph.exportToPngFile(shortestPathPngFilePath, shortestPath);
+                        System.out.println("包含最短路径的PNG文件已导出！");
+                    }
                     break;
 
                 case 6:
-                    String randomWalk = randomWalk(graph);
-//                    System.out.println(randomWalk);
                     List<String> nodesVisited = graph.randomWalk();
                     writeNodesToFile(nodesVisited, "D:\\IJ IDEA\\hit\\lab1\\src\\main\\resources\\random_walk.txt");
                     System.out.println("Random walk nodes written to random_walk.txt");
@@ -173,6 +188,7 @@ public class Lab1 {
             }
         }
     }
+
 
     static void writeNodesToFile(List<String> nodesVisited, String filePath) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, false))) {
@@ -233,10 +249,11 @@ public class Lab1 {
         return bridges.get(new Random().nextInt(bridges.size()));
     }
 
-    static String calcShortestPath(Graph graph, String word1, String word2) {
+    static List<String> calcShortestPath(Graph graph, String word1, String word2) {
         Map<String, Map<String, Integer>> adjList = graph.getAdjList();
         if (!adjList.containsKey(word1) || !adjList.containsKey(word2)) {
-            return "No path from \"" + word1 + "\" to \"" + word2 + "\"!";
+            System.out.println("No path from \"" + word1 + "\" to \"" + word2 + "\"!");
+            return Collections.emptyList();
         }
 
         Map<String, Integer> distances = new HashMap<>();
@@ -276,7 +293,8 @@ public class Lab1 {
         }
 
         if (!previousNodes.containsKey(word2)) {
-            return "No path from \"" + word1 + "\" to \"" + word2 + "\"!";
+            System.out.println("No path from \"" + word1 + "\" to \"" + word2 + "\"!");
+            return Collections.emptyList();
         }
 
         List<String> path = new LinkedList<>();
@@ -284,8 +302,9 @@ public class Lab1 {
             path.add(at);
         }
         Collections.reverse(path);
-        return "Shortest path from \"" + word1 + "\" to \"" + word2 + "\": " + String.join(" -> ", path);
+        return path;
     }
+
 
     static String randomWalk(Graph graph) {
         List<String> nodes = new ArrayList<>(graph.getAdjList().keySet());
